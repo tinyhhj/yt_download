@@ -1,0 +1,46 @@
+const URL = require('url').URL;
+const fs = require('fs');
+const exec = require('child_process').exec;
+const lineReader = require('readline').createInterface({
+input: fs.createReadStream('list')
+});
+const newFile = [];
+
+const isExist = (id,cb,line,newFile)=>exec(`redis-cli zrank finished ${id}`, (err,stdout)=>{
+	if(err) {
+		console.error(`zrank exec error: ${err}`);
+        newFile.push(line);
+		return;
+	}
+	if(stdout.trim()) {
+        console.log(`id is already exist ${id}`);
+		return;	
+	} else {
+        console.log(`video id is ${id} downloading...`);
+        cb(id,line,newFile);
+	}
+});
+
+const download = (id,line,newFile) =>  {
+    exec(`redis-cli lpush pending ${id}`,(err,stdout,stderr)=>{
+		if(err) {
+			console.error(`exec error: ${err}`);
+			newFile.push(line);	
+			return;
+		}
+		console.log(`lpush finished: ${stdout}`);
+	});
+}
+
+
+lineReader.on('line', data=>{
+	console.log(`url is ${data}`);
+	const url = new URL(data);
+	const param = url.searchParams;
+	const id = param.get('v');
+    isExist(id, download, data, newFile);
+});
+lineReader.on("close",()=>{
+    console.log(`newFile: ${newFile.join('\n')}`);
+    fs.writeFileSync("test","","utf-8");
+});

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+while read line 
+do
+ yt_name=${line:32}
+ echo "name is ${yt_name}"
+ redis-cli lpush pending ${yt_name}
+done < test
